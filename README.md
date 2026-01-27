@@ -14,6 +14,15 @@ using EasyFastTcpSerialWrapper;
     _wrapper = new ByteWrapper();
     _tcpServer = new TcpServer(IPAddress.Parse(address), port);
     _tcpServer.DataReceivedNotify += receivedData;
+    if (!_tcpServerHSL.Start())
+    {
+        MessageBox.Show
+         (
+            "Do not hold the port "
+                + port.ToString()"
+            , "MyProgram"
+        );
+    }
 
 ...
 
@@ -67,6 +76,13 @@ using EasyFastTcpSerialWrapper;
     _wrapper = new ByteWrapper();
     _tcpClient = new FastEasyTcpClient(HOST_ADDRESS, HOST_PORT);
     _tcpClient.DataReceived += routeReceived;
+
+...
+
+    public void ConnectToServer()
+    {
+        _tcpClient.Connect();
+    }
 
 ...
 
