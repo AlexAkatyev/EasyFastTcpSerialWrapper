@@ -29,7 +29,9 @@ using EasyFastTcpSerialWrapper;
         _wrapper.SendMessage(message);
         TcpServerSend();
     }
+
 ...
+
     public void TcpServerSend()
     {
         byte[] toSend = _wrapper.GetDataToSend();
