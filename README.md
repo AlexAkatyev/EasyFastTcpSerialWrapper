@@ -45,7 +45,7 @@ using EasyFastTcpSerialWrapper;
         byte[] input = new byte[length];
         Array.Copy(data, input, length);
         _wrapper.ReceiveData(input);
-        List<List<byte>> receivedMessages = _wrapper.GetReceivedMessages();
+        byte[][] receivedMessages = _wrapper.GetReceivedMessages();
         // process received messages
     }
 
@@ -104,7 +104,7 @@ using EasyFastTcpSerialWrapper;
 
     public void ProcessReceivedMessages()
     {
-        List<List<byte>> messages = _wrapper.GetReceivedMessages();
+        byte[][] messages = _wrapper.GetReceivedMessages();
         // process received messages
     }
 

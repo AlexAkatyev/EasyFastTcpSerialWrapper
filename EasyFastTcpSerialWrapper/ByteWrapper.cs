@@ -76,14 +76,12 @@ public class ByteWrapper
     }
 
 
-    public List<List<byte>> GetReceivedMessages()
+    public byte[][] GetReceivedMessages()
     {
-        List<List<byte>> result = [];
+        byte[][] result = new byte[_receiveMessages.Count][];
         for (int i = 0; i < _receiveMessages.Count; i++)
         {
-            byte[] message = new byte[_receiveMessages[i].Count];
-            _receiveMessages[i].CopyTo(message);
-            result.Add([.. message]);
+            result[i] = _receiveMessages[i].ToArray();
         }
         _receiveMessages.Clear();
         return result;
