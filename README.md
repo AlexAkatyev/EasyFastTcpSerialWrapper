@@ -19,7 +19,7 @@ using EasyFastTcpSerialWrapper;
         MessageBox.Show
          (
             "Do not hold the port "
-                + port.ToString()"
+                + port.ToString()
             , "MyProgram"
         );
     }
