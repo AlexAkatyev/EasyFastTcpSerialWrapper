@@ -6,6 +6,15 @@
  * то последовательность будет выглядеть  0x20 0x20 0x20 0x20 0x20 0x01 0x20.
  */
 
+
+/*
+* Messages are transmitted as a stream.
+* For example, ranger == 0x20, flag == 0x01.
+* The beginning and end of any message are marked with a delimiter: 0x20 0x20 0x20 0x20 0x20 0x20.
+* If you need to transmit data matching the delimiter, the sequence will look like 0x20 0x20 0x20 0x20 0x20 0x01 0x20.
+*/
+
+
 using System.Collections.Generic;
 
 namespace EasyFastTcpSerialWrapper;
