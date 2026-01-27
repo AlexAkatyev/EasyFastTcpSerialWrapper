@@ -1,0 +1,82 @@
+﻿<Window x:Class="WrapTester.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WrapTester"
+        mc:Ignorable="d"
+        Title="WrapTester"
+        Height="450"
+        Width="800"
+        >
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+        <CheckBox
+            Grid.Row="0"
+            Grid.Column="0"
+            Content="Server"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Command="{Binding Path=OnServer}"
+            />
+        <CheckBox
+            Grid.Row="0"
+            Grid.Column="1"
+            Content="Client"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Command="{Binding Path=OnClient}"
+            />
+        <TextBox
+            Grid.Row="1"
+            Grid.Column="0"
+            TextWrapping="Wrap"
+            Margin="5 5 5 5"
+            Text="{Binding Path=ServerInput}"
+            />
+        <TextBox
+            Grid.Row="1"
+            Grid.Column="1"
+            TextWrapping="Wrap"
+            Margin="5 5 5 5"
+            Text="{Binding Path=ClientInput}"
+            />
+        <Button
+            Grid.Row="2"
+            Grid.Column="0"
+            Content="Send to client"
+            Margin="5 5 5 5"
+            Command="{Binding Path=SendToClient}"
+            />
+        <Button
+            Grid.Row="2"
+            Grid.Column="1"
+            Content="Send to server"
+            Margin="5 5 5 5"
+            Command="{Binding Path=SendToServer}"
+            />
+        <TextBox
+            Grid.Row="3"
+            Grid.Column="0"
+            TextWrapping="Wrap"
+            Margin="5 5 5 5"
+            Text="{Binding Path=ServerOut}"
+            />
+        <TextBox
+            Grid.Row="3"
+            Grid.Column="1"
+            TextWrapping="Wrap"
+            Margin="5 5 5 5"
+            Text="{Binding Path=ClientOut}"
+            />
+    </Grid>
+</Window>
