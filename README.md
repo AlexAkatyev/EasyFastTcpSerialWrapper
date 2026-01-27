@@ -14,7 +14,7 @@ using EasyFastTcpSerialWrapper;
     _wrapper = new ByteWrapper();
     _tcpServer = new TcpServer(IPAddress.Parse(address), port);
     _tcpServer.DataReceivedNotify += receivedData;
-    if (!_tcpServerHSL.Start())
+    if (!_tcpServer.Start())
     {
         MessageBox.Show
          (
