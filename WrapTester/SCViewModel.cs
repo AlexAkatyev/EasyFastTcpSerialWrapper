@@ -1,9 +1,12 @@
-﻿using System.Runtime.InteropServices;
+﻿using GalaSoft.MvvmLight.Command;
+using System.Collections;
+using System.Text;
 using System.Windows.Input;
 
 namespace WrapTester;
 
 public class SCViewModel
+: ViewModelBase
 {
     public void SetServer(Server server)
     {
@@ -14,36 +17,61 @@ public class SCViewModel
     public void SetClient(Client client)
     {
         _client = client;
+        _client.MessageReceived += clientReceived;
     }
 
 
+    private ICommand? _cmdServerPost = null;
+    public ICommand CmdServerPost => _cmdServerPost ??= new RelayCommand(serverPost);
 
-    private bool _onServer = false;
-    public bool OnServer
+    private void serverPost()
     {
-        get
+        if (ServerInput.Length > 0)
         {
-            return _onServer;
-        }
-        set
-        {
-            _onServer = value;
+            _server.PostMessage(Encoding.ASCII.GetBytes(ServerInput));
+            ServerInput = "";
         }
     }
 
 
-    private bool _onClient = false;
-    public bool OnClient
+    private ICommand? _cmdServerSend = null;
+    public ICommand CmdServerSend => _cmdServerSend ??= new RelayCommand(serverSend);
+
+    private void serverSend()
     {
-        get
+        if (ServerInput.Length > 0)
         {
-            return _onClient;
-        }
-        set
-        {
-            _onClient = value;
+            _server.SendMessage(Encoding.ASCII.GetBytes(ServerInput));
+            ServerInput = "";
         }
     }
+
+
+    private ICommand? _cmdServerSendToClient = null;
+    public ICommand CmdServerSendToClient => _cmdServerSendToClient ??= new RelayCommand(serverSendToClient);
+
+    private void serverSendToClient()
+    {
+        _server.TcpServerSend();
+    }
+
+
+    private ICommand? _cmdOnClient = null;
+    public ICommand CmdOnClient => _cmdOnClient ??= new RelayCommand(routeConnect);
+
+    private void routeConnect()
+    {
+        if (!_onClient)
+        {
+            _client.ConnectToServer();
+        }
+        else
+        {
+            _client.Disconnect();
+        }
+        _onClient = !_onClient;
+    }
+
 
 
     private string _serverInput = "";
@@ -56,6 +84,7 @@ public class SCViewModel
         set
         {
             _serverInput = value;
+            OnPropertyChanged();
         }
     }
 
@@ -70,6 +99,7 @@ public class SCViewModel
         set
         {
             _clientInput = value;
+            OnPropertyChanged();
         }
     }
 
@@ -84,6 +114,7 @@ public class SCViewModel
         set
         {
             _serverOut = value;
+            OnPropertyChanged();
         }
     }
 
@@ -98,10 +129,22 @@ public class SCViewModel
         set
         {
             _clientOut = value;
+            OnPropertyChanged();
+        }
+    }
+
+
+    private void clientReceived(byte[][] messages)
+    {
+        for (int i = 0; i < messages.Length; i++)
+        {
+            string data = Encoding.ASCII.GetString(messages[i]);
+            ClientOut += data + "\n";
         }
     }
 
 
     private Server _server;
     private Client _client;
+    private bool _onClient = false;
 }

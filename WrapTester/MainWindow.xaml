@@ -20,13 +20,12 @@
             <RowDefinition Height="50"/>
             <RowDefinition Height="1*"/>
         </Grid.RowDefinitions>
-        <CheckBox
+        <Label
             Grid.Row="0"
             Grid.Column="0"
             Content="Server"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Command="{Binding Path=OnServer}"
             />
         <CheckBox
             Grid.Row="0"
@@ -34,7 +33,7 @@
             Content="Client"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
-            Command="{Binding Path=OnClient}"
+            Command="{Binding Path=CmdOnClient}"
             />
         <TextBox
             Grid.Row="1"
@@ -50,20 +49,62 @@
             Margin="5 5 5 5"
             Text="{Binding Path=ClientInput}"
             />
-        <Button
+        <Grid
             Grid.Row="2"
             Grid.Column="0"
-            Content="Send to client"
-            Margin="5 5 5 5"
-            Command="{Binding Path=SendToClient}"
-            />
-        <Button
+            >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+            <Button
+                Grid.Column="0"
+                Content="Post"
+                Margin="5 5 5 5"
+                Command="{Binding Path=CmdServerPost}"
+                />
+            <Button
+                Grid.Column="1"
+                Content="Send"
+                Margin="5 5 5 5"
+                Command="{Binding Path=CmdServerSend}"
+                />
+            <Button
+                Grid.Column="2"
+                Content="Send to client"
+                Margin="5 5 5 5"
+                Command="{Binding Path=CmdServerSendToClient}"
+                />
+        </Grid>
+        <Grid
             Grid.Row="2"
             Grid.Column="1"
-            Content="Send to server"
-            Margin="5 5 5 5"
-            Command="{Binding Path=SendToServer}"
-            />
+            >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+            <Button
+                Grid.Column="0"
+                Content="Post"
+                Margin="5 5 5 5"
+                Command="{Binding Path=SendToServer}"
+                />
+            <Button
+                Grid.Column="1"
+                Content="Send"
+                Margin="5 5 5 5"
+                Command="{Binding Path=SendToServer}"
+                />
+            <Button
+                Grid.Column="2"
+                Content="Send to server"
+                Margin="5 5 5 5"
+                Command="{Binding Path=SendToServer}"
+                />
+        </Grid>
         <TextBox
             Grid.Row="3"
             Grid.Column="0"

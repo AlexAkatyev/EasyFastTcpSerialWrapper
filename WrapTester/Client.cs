@@ -3,6 +3,8 @@ using System;
 
 namespace WrapTester;
 
+public delegate void ClientReceivedMessages(byte[][] messages);
+
 public class Client
 {
     public Client()
@@ -10,6 +12,18 @@ public class Client
         _wrapper = new ByteWrapper();
         _tcpClient = new FastEasyTcpClient("localhost", 22022);
         _tcpClient.DataReceived += routeReceived;
+    }
+
+
+    public void ConnectToServer()
+    {
+        _tcpClient.Connect();
+    }
+
+
+    public void Disconnect()
+    {
+        _tcpClient.Disconnect();
     }
 
 
@@ -38,13 +52,18 @@ public class Client
         byte[] input = new byte[count];
         Array.Copy(data, input, count);
         _wrapper.ReceiveData(input);
+        ProcessReceivedMessages();
     }
+
+
+    public event ClientReceivedMessages MessageReceived;
 
 
     public void ProcessReceivedMessages()
     {
         byte[][] messages = _wrapper.GetReceivedMessages();
         // process received messages
+        MessageReceived?.Invoke(messages);
     }
 
 
