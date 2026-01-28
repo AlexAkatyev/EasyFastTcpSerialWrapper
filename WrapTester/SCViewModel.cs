@@ -11,6 +11,7 @@ public class SCViewModel
     public void SetServer(Server server)
     {
         _server = server;
+        _server.MessageReceived += serverReceived;
     }
 
 
@@ -72,6 +73,40 @@ public class SCViewModel
         _onClient = !_onClient;
     }
 
+
+    private ICommand? _cmdClientPost = null;
+    public ICommand CmdClientPost => _cmdClientPost ??= new RelayCommand(clientPost);
+
+    private void clientPost()
+    {
+        if (ClientInput.Length > 0)
+        {
+            _client.PostMessage(Encoding.ASCII.GetBytes(ClientInput));
+            ClientInput = "";
+        }
+    }
+
+
+    private ICommand? _cmdClientSend = null;
+    public ICommand CmdClientSend => _cmdClientSend ??= new RelayCommand(clientSend);
+
+    private void clientSend()
+    {
+        if (ClientInput.Length > 0)
+        {
+            _client.SendMessage(Encoding.ASCII.GetBytes(ClientInput));
+            ClientInput = "";
+        }
+    }
+
+
+    private ICommand? _cmdClientSendToServer = null;
+    public ICommand CmdClientSendToServer => _cmdClientSendToServer ??= new RelayCommand(clientSendToServer);
+
+    private void clientSendToServer()
+    {
+        _client.TcpClientSend();
+    }
 
 
     private string _serverInput = "";
@@ -140,6 +175,16 @@ public class SCViewModel
         {
             string data = Encoding.ASCII.GetString(messages[i]);
             ClientOut += data + "\n";
+        }
+    }
+
+
+    private void serverReceived(byte[][] messages)
+    {
+        for (int i = 0; i < messages.Length; i++)
+        {
+            string data = Encoding.ASCII.GetString(messages[i]);
+            ServerOut += data + "\n";
         }
     }
 

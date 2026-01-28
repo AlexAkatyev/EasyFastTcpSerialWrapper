@@ -90,19 +90,19 @@
                 Grid.Column="0"
                 Content="Post"
                 Margin="5 5 5 5"
-                Command="{Binding Path=SendToServer}"
+                Command="{Binding Path=CmdClientPost}"
                 />
             <Button
                 Grid.Column="1"
                 Content="Send"
                 Margin="5 5 5 5"
-                Command="{Binding Path=SendToServer}"
+                Command="{Binding Path=CmdClientSend}"
                 />
             <Button
                 Grid.Column="2"
                 Content="Send to server"
                 Margin="5 5 5 5"
-                Command="{Binding Path=SendToServer}"
+                Command="{Binding Path=CmdClientSendToServer}"
                 />
         </Grid>
         <TextBox

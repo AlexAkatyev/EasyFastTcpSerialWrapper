@@ -5,6 +5,8 @@ using System.Windows;
 
 namespace WrapTester;
 
+public delegate void ServerReceivedMessages(byte[][] messages);
+
 public class Server
 {
     private const int PORT = 22022;
@@ -46,6 +48,9 @@ public class Server
     }
 
 
+    public event ServerReceivedMessages MessageReceived;
+
+
     private void receivedData(byte[] data, int length)
     {
         byte[] input = new byte[length];
@@ -53,6 +58,7 @@ public class Server
         _wrapper.ReceiveData(input);
         byte[][] receivedMessages = _wrapper.GetReceivedMessages();
         // process received messages
+        MessageReceived?.Invoke(receivedMessages);
     }
 
     private readonly TcpServer _tcpServer;
