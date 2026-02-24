@@ -9,7 +9,7 @@ public delegate void RouteDataReceived(byte[] data, int count);
 
 public class FastEasyTcpClient
 {
-    private const int ACCEPT_TIME_OUT = 100;
+    private const int ACCEPT_TIME_OUT = 1000;
     private const int RECEIVE_TIME_OUT = 100;
     private const int WRITE_TIME_OUT = 100;
     private const int MAX_TCP_MESSAGE = 1500;
@@ -115,7 +115,7 @@ public class FastEasyTcpClient
     }
 
 
-    private void read(object obj)
+    private async void read(object obj)
     {
         if (_stream == null)
         {
@@ -129,7 +129,7 @@ public class FastEasyTcpClient
         int recLength = 0;
         try
         {
-            recLength = _stream.Read(buffer, 0, buffer.Length);
+            recLength = await _stream.ReadAsync(buffer, 0, buffer.Length);
         }
         catch
         {
