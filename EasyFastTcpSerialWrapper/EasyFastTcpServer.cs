@@ -16,8 +16,9 @@ public class TcpServer
     private const int TIME_OUT_WRITE = 100;
     private const int MAX_TCP_MESSAGE = 1500;
 
-    public TcpServer(IPAddress address, int port)
+    public TcpServer(IPAddress address, int port, bool nagleDelay = false)
     {
+        _nagleDelay = nagleDelay;
         _server = new TcpListener(address, port);
         _acceptTimer = new Timer
         (
@@ -34,6 +35,12 @@ public class TcpServer
             , Timeout.Infinite
         );
         _enable = false;
+    }
+
+
+    public void SetNagleDelay(bool delay)
+    {
+        _nagleDelay  = delay;
     }
 
 
@@ -92,6 +99,7 @@ public class TcpServer
         #endif
 
         TcpClient client = await _server.AcceptTcpClientAsync();
+        client.NoDelay = !_nagleDelay;
         if (client == null)
         {
             return;
@@ -159,6 +167,7 @@ public class TcpServer
         try
         {
             _stream.WriteAsync(_sendData.GetRange(0, sendCount).ToArray(), 0, sendCount);
+            _stream.Flush();
             _sendData.RemoveRange(0, sendCount);
         }
         catch
@@ -175,4 +184,5 @@ public class TcpServer
     private readonly List<byte> _sendData = [];
     private bool _enable;
     private bool _connect = false;
+    private bool _nagleDelay = false;
 }

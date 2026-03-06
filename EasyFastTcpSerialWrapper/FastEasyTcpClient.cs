@@ -14,10 +14,11 @@ public class FastEasyTcpClient
     private const int WRITE_TIME_OUT = 100;
     private const int MAX_TCP_MESSAGE = 1500;
 
-    public FastEasyTcpClient(string hostName, int port)
+    public FastEasyTcpClient(string hostName, int port, bool nagleDelay = false)
     {
         _hostName = hostName;
         _port = port;
+        _nagleDelay = nagleDelay;
         _acceptTimer = new Timer
         (
             new TimerCallback(acceptToServer)
@@ -81,6 +82,16 @@ public class FastEasyTcpClient
     }
 
 
+    public void SetNagleDelay(bool delay)
+    {
+        _nagleDelay = delay;
+        if (_client != null)
+        {
+            _client.NoDelay = !_nagleDelay;
+        }
+    }
+
+
     public event RouteDataReceived DataReceived;
 
 
@@ -91,6 +102,7 @@ public class FastEasyTcpClient
             _stream?.Dispose();
             _stream = null;
             _client = new TcpClient();
+            _client.NoDelay = !_nagleDelay;
         }
         if (!_client.Connected)
         {
@@ -165,6 +177,7 @@ public class FastEasyTcpClient
         try
         {
             _stream.Write(_sendData.GetRange(0, sendCount).ToArray(), 0, sendCount);
+            _stream.Flush();
             _sendData.RemoveRange(0, sendCount);
         }
         catch
@@ -184,4 +197,5 @@ public class FastEasyTcpClient
     private readonly Timer _writeTimer;
     private bool _enable;
     private readonly List<byte> _sendData = [];
+    private bool _nagleDelay = false;
 }
