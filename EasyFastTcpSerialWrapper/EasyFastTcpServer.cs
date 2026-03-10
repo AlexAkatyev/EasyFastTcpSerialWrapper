@@ -166,9 +166,10 @@ public class TcpServer
         int sendCount = Math.Min(MAX_TCP_MESSAGE, _sendData.Count);
         try
         {
-            _stream.WriteAsync(_sendData.GetRange(0, sendCount).ToArray(), 0, sendCount);
-            _stream.Flush();
+            byte[] toSend = [.. _sendData.GetRange(0, sendCount)];
             _sendData.RemoveRange(0, sendCount);
+            _stream.Write(toSend, 0, toSend.Length);
+            _stream.Flush();
         }
         catch
         {
