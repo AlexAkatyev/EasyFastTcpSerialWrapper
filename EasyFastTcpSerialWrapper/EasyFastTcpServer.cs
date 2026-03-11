@@ -12,7 +12,7 @@ public class TcpServer
 {
     public delegate void TcpServerReceiveHandler(byte[] data, int length);
     private const int TIME_OUT_WAIT = 0;
-    private const int TIME_OUT_ACCEPT = 1000;
+    private const int TIME_OUT_ACCEPT = 500;
     private const int TIME_OUT_WRITE = 100;
     private const int MAX_TCP_MESSAGE = 1500;
 
@@ -91,14 +91,14 @@ public class TcpServer
     public event TcpServerReceiveHandler? DataReceivedNotify;
 
 
-    private async void acceptClient(object obj)
+    private void acceptClient(object obj)
     {
         #if DEBUG
         ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxIoThreads);
         ThreadPool.GetAvailableThreads(out int freeWorkerThreads, out int freeIoThreads);
         #endif
 
-        TcpClient client = await _server.AcceptTcpClientAsync();
+        TcpClient client = _server.AcceptTcpClient();
         client.NoDelay = !_nagleDelay;
         if (client == null)
         {
@@ -117,7 +117,11 @@ public class TcpServer
 
         while (true)
         {
-            _connect = true;
+            _connect = client.Connected;
+            if (!_connect)
+            {
+                break;
+            }
             // read
             byte[] recBuffer = new byte[MAX_TCP_MESSAGE];
             int recLength = 0;
@@ -135,14 +139,6 @@ public class TcpServer
                 DataReceivedNotify?.Invoke(recBuffer, recLength);
             }
         }
-
-        string comment = "client out";
-        byte[] bc = new byte[comment.Length];
-        for (int i = 0; i < bc.Length; i++)
-        {
-            bc[i] = (byte)comment[i];
-        }
-        DataReceivedNotify?.Invoke(bc, comment.Length);
         _acceptTimer.Change(TIME_OUT_ACCEPT, TIME_OUT_ACCEPT);
     }
 
