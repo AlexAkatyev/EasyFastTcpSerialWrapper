@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -11,29 +11,14 @@ namespace EasyFastTcpSerialWrapper;
 public class TcpServer
 {
     public delegate void TcpServerReceiveHandler(byte[] data, int length);
-    private const int TIME_OUT_WAIT = 0;
-    private const int TIME_OUT_ACCEPT = 500;
-    private const int TIME_OUT_WRITE = 100;
+    public event TcpServerReceiveHandler? DataReceivedNotify;
+
     private const int MAX_TCP_MESSAGE = 1500;
 
     public TcpServer(IPAddress address, int port, bool nagleDelay = false)
     {
         _nagleDelay = nagleDelay;
         _server = new TcpListener(address, port);
-        _acceptTimer = new Timer
-        (
-            new TimerCallback(acceptClient)
-            , null
-            , Timeout.Infinite
-            , Timeout.Infinite
-        );
-        _writeTimer = new Timer
-        (
-            new TimerCallback(write)
-            , null
-            , Timeout.Infinite
-            , Timeout.Infinite
-        );
         _enable = false;
     }
 
@@ -41,145 +26,221 @@ public class TcpServer
     public void SetNagleDelay(bool delay)
     {
         _nagleDelay  = delay;
+        if (_currentClient != null)
+        {
+            _currentClient.NoDelay = !_nagleDelay;
+        }
     }
 
 
     public bool Start()
     {
-        bool error = false;
+        if (_enable)
+        {
+            return true;
+        }
         try
         {
             _server.Start();
             _enable = true;
-            _acceptTimer.Change(TIME_OUT_WAIT, TIME_OUT_ACCEPT);
+            _cts = new CancellationTokenSource();
+
+            // Запускаем асинхронный цикл прослушивания портов
+            _ = Task.Run(() => AcceptClientsAsync(_cts.Token));
+            return true;
         }
         catch
         {
-            error = true;
+            return false;
         }
-        return !error;
     }
 
 
     public void Stop()
     {
-        _acceptTimer.Change(Timeout.Infinite, Timeout.Infinite);
         _enable = false;
+        _cts?.Cancel();
         _server.Stop();
+        DisconnectCurrentClient();
     }
 
 
     public void Send(byte[] data, int pos, int count)
     {
         if (!_enable
-            || pos >= data.Length
+            || data == null
+            || pos < 0
             || (pos + count) > data.Length)
         {
             return;
         }
         for (int i = pos; i < (pos + count); i++)
         {
-            _sendData.Add(data[i]);
+            _sendQueue.Enqueue(data[i]);
         }
         if (count > 0)
         {
-            _writeTimer.Change(0, TIME_OUT_WRITE);
+            // Триггерим отправку данных в фоне без блокировок
+            _ = Task.Run(() => ProcessWriteQueueAsync());
         }
     }
 
 
-    public event TcpServerReceiveHandler? DataReceivedNotify;
-
-
-    private void acceptClient(object obj)
+    private async Task AcceptClientsAsync(CancellationToken token)
     {
-        #if DEBUG
-        ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxIoThreads);
-        ThreadPool.GetAvailableThreads(out int freeWorkerThreads, out int freeIoThreads);
-        #endif
-
-        TcpClient client = _server.AcceptTcpClient();
-        client.NoDelay = !_nagleDelay;
-        if (client == null)
+        while (_enable && !token.IsCancellationRequested)
         {
-            return;
-        }
-
-        _ = Task.Run(() => readHandleClient(client));
-    }
-
-
-    private async Task readHandleClient(TcpClient client)
-    {
-        _connect = true;
-        _acceptTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        _stream = client.GetStream();
-
-        while (true)
-        {
-            _connect = client.Connected;
-            if (!_connect)
-            {
-                break;
-            }
-            // read
-            byte[] recBuffer = new byte[MAX_TCP_MESSAGE];
-            int recLength = 0;
             try
             {
-                recLength = _stream.Read(recBuffer, 0, recBuffer.Length);
+                // Исправлено для .NET Framework 4.8.1 (убран аргумент token)
+                TcpClient incomingClient = await _server.AcceptTcpClientAsync().ConfigureAwait(false);
+                incomingClient.NoDelay = !_nagleDelay;
+
+                // Сценарий Single-Client: Если кто-то уже подключен,
+                // принудительно закрываем старую сессию.
+                if (_currentClient != null)
+                {
+                    DisconnectCurrentClient();
+                }
+
+                _currentClient = incomingClient;
+                _stream = incomingClient.GetStream();
+
+                // Запускаем чтение для одного конкретного клиента
+                _ = Task.Run(() => ReadHandleClientAsync(incomingClient, token), token);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Сюда мы зайдем, когда вызовем метод Stop() и сервер закроется. 
+                // Это нормальное поведение для завершения цикла в .NET Framework.
+                break;
+            }
+            catch (Exception)
+            {
+                // Перестраховка на случай непредвиденных ошибок сокета
+                if (!_enable) break;
+            }
+        }
+    }
+
+
+    // Асинхронное чтение без таймеров
+    private async Task ReadHandleClientAsync(TcpClient client, CancellationToken token)
+    {
+        byte[] recBuffer = new byte[MAX_TCP_MESSAGE];
+        NetworkStream? stream = _stream;
+
+        if (stream == null) return;
+
+        while
+        (
+            _enable
+            && client.Connected
+            && !token.IsCancellationRequested
+        )
+        {
+            try
+            {
+                // Асинхронное чтение: поток освобождается, пока нет данных в сокете
+                int recLength = await stream.ReadAsync(recBuffer, 0, recBuffer.Length, token).ConfigureAwait(false);
+
+                if (recLength == 0)
+                {
+                    // Клиент корректно закрыл соединение
+                    break;
+                }
+
+                DataReceivedNotify?.Invoke(recBuffer, recLength);
             }
             catch
             {
-                _connect = false;
-                break;
-            }
-            if (recLength > 0)
-            {
-                DataReceivedNotify?.Invoke(recBuffer, recLength);
+                break; // Ошибка чтения или клиент отключился жестко
             }
         }
-        _acceptTimer.Change(TIME_OUT_ACCEPT, TIME_OUT_ACCEPT);
+
+        if (_currentClient == client)
+        {
+            DisconnectCurrentClient();
+        }
     }
 
 
-    private void write(object obj)
+    // Потокобезопасная асинхронная отправка пакетов пакетами до 1500 байт
+    private async Task ProcessWriteQueueAsync()
     {
-        #if DEBUG
-        ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxIoThreads);
-        ThreadPool.GetAvailableThreads(out int freeWorkerThreads, out int freeIoThreads);
-        #endif
+        // Используем семафор, чтобы только один поток отправлял данные в сокет в конкретный момент времени
+        if (!await _writeSemaphore.WaitAsync(0).ConfigureAwait(false))
+        {
+            return; // Запись уже выполняется другим потоком, он сам заберет данные из очереди
+        }
 
-        if (!_connect || _stream == null)
-        {
-            return;
-        }
-        if (_sendData.Count <= 0)
-        {
-            _writeTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            return;
-        }
-        int sendCount = Math.Min(MAX_TCP_MESSAGE, _sendData.Count);
         try
         {
-            byte[] toSend = [.. _sendData.GetRange(0, sendCount)];
-            _sendData.RemoveRange(0, sendCount);
-            _stream.Write(toSend, 0, toSend.Length);
-            _stream.Flush();
+            NetworkStream? stream = _stream;
+            if (stream == null || _currentClient == null || !_currentClient.Connected)
+            {
+                while (_sendQueue.TryDequeue(out _))
+                {
+                    // Очищаем очередь, извлекая все элементы в никуда
+                }
+                return;
+            }
+
+            while (!_sendQueue.IsEmpty)
+            {
+                int chunkSize = Math.Min(MAX_TCP_MESSAGE, _sendQueue.Count);
+                if (chunkSize == 0) break;
+
+                byte[] toSend = new byte[chunkSize];
+                for (int i = 0; i < chunkSize; i++)
+                {
+                    if (_sendQueue.TryDequeue(out byte b))
+                    {
+                        toSend[i] = b;
+                    }
+                }
+
+                await stream.WriteAsync(toSend, 0, toSend.Length).ConfigureAwait(false);
+                await stream.FlushAsync().ConfigureAwait(false);
+            }
         }
         catch
         {
+            DisconnectCurrentClient();
+        }
+        finally
+        {
+            _writeSemaphore.Release();
+        }
+    }
+
+
+    private void DisconnectCurrentClient()
+    {
+        try
+        {
+            _stream?.Dispose();
+            _currentClient?.Dispose();
+        }
+        catch { }
+        finally
+        {
             _stream = null;
+            _currentClient = null;
+            while (_sendQueue.TryDequeue(out _))
+            {
+                // Очищаем очередь, извлекая все элементы в никуда
+            }
         }
     }
 
 
     private readonly TcpListener _server;
+    private TcpClient? _currentClient;
     private NetworkStream _stream;
-    private readonly Timer _acceptTimer;
-    private readonly Timer _writeTimer;
-    private readonly List<byte> _sendData = [];
+    private readonly ConcurrentQueue<byte> _sendQueue = new();
     private bool _enable;
-    private bool _connect = false;
     private bool _nagleDelay = false;
+    private CancellationTokenSource? _cts;
+    private readonly SemaphoreSlim _writeSemaphore = new(1, 1);
 }
