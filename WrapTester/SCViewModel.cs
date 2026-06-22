@@ -1,5 +1,4 @@
 ﻿using GalaSoft.MvvmLight.Command;
-using System.Collections;
 using System.Text;
 using System.Windows.Input;
 
